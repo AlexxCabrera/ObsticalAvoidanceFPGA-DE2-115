@@ -3,9 +3,11 @@
 #include "altera_avalon_pio_regs.h"
 #include "altera_avalon_timer_regs.h"
 #include "sys/alt_irq.h"
+#include <altera_up_sd_card_avalon_interface.h>
 
 volatile int edge_capture;
 
+alt_up_sd_card_dev *device_reference = NULL;//SDCARD Pointer
 
 void delay(){ // delays for relative to the value of "speed"
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 8); //Stop value high
@@ -20,10 +22,10 @@ void delay(){ // delays for relative to the value of "speed"
 			}
 }
 
-void carDelay(){ // delays for relative to the value of "speed"
+void Delay1s(){ // delays for relative to the value of "speed"
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 8); //Stop value high
 	IOWR_ALTERA_AVALON_TIMER_STATUS(0x1800, 2);  //Clear the TO bit
-	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0xF080);	//timer value Lower bit set 250ms
+	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0xF080);	//timer value Lower bit set 1s
 	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x02FA);	//timer value Higher bit set
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 4); //Start value high
 
@@ -120,32 +122,32 @@ int wheels;
 void moveForward(){
 	wheels = 1+2+32+64;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	carDelay();
-	carDelay();
+	Delay1s();
+	Delay1s();
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
 }
 
 void moveBack(){
 	wheels = 4+8+16+128;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	carDelay();
-	carDelay();
+	Delay1s();
+	Delay1s();
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
 }
 
 void moveTurnRight(){
 	wheels = 2+64+8+16;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	carDelay();
-	carDelay();
+	Delay1s();
+	Delay1s();
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
 }
 
 void moveTurnLeft(){
 	wheels = 4+128+1+32;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	carDelay();
-	carDelay();
+	Delay1s();
+	Delay1s();
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
 }
 
@@ -161,10 +163,9 @@ void getDistance(){
 	}
 }
 
-void LidarRead(){
+void LidarReadTest(){
 	int LdrData = 0; //Value being read
 	int temp = 0;    //Value used to compare against read value
-
 	//Hold until data = 89. [A9 A9]base16 is start of new data set
 	while(LdrData!=89){
 		LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
@@ -183,6 +184,34 @@ void LidarRead(){
 	printf("\n");
 }
 
+int LidarReadDistanceL(){
+	int LdrData = 0; //Value being read
+
+	//Hold until data = 89. [A9 A9]base16 is start of new data set
+	while(LdrData!=89){
+		LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	}
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	return LdrData;
+}
+
+int LidarReadDistanceH(){
+	int LdrData = 0; //Value being read
+
+	//Hold until data = 89. [A9 A9]base16 is start of new data set
+	while(LdrData!=89){
+		LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	}
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	return LdrData;
+}
 void key0_ISR(){
 	printf("key0\n");
 	moveForward();
@@ -258,12 +287,15 @@ int main()
 	//IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x02FA);	//timer value Higher bit set
 	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower bit set 250ms
 	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher bit set
-
-
+	int lowerDst;
+	int upperDst;
 	while(1){
-		//LidarRead();
-		//delay();
-		//delay();
+		lowerDst = LidarReadDistanceL();
+		upperDst = LidarReadDistanceH();
+		printf("%x ",lowerDst);
+		printf("%x\n",upperDst);
+		Delay1s();
+		Delay1s();
 	}
 
 	printf("done");
