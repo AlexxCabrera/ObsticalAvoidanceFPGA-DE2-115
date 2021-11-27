@@ -55,7 +55,7 @@ void clear_LEDr_LEDg_Hex(){ //Resets the components
 	IOWR_ALTERA_AVALON_PIO_DATA(0x1850, 0);	//clear the LEDgreen
 }
 
-void numToHex(int digit){ //Stores digit parameter into the HEX0 display
+void numToHex(int digit,int address){ //Stores digit parameter into the HEX0 display
 
 	int hex;
 	//int HexAdress[8] = {0x18d0,0x18c0,0x18b0,0x18a0,0x1890,0x1880,0x1870,0x1860};
@@ -113,7 +113,49 @@ void numToHex(int digit){ //Stores digit parameter into the HEX0 display
 			hex = 127;
 	}
 
-	IOWR_ALTERA_AVALON_PIO_DATA(0x18d0,hex);
+	IOWR_ALTERA_AVALON_PIO_DATA(address,hex);
+
+}
+
+void intToHexMultiNumber(int digit){
+
+	int HexAddress[8] = {0x18d0,0x18c0,0x18b0,0x18a0,0x1890,0x1880,0x1870,0x1860};
+	int j = 7;
+
+	for(int i=0; i<8; i++){
+		if(digit>=10000000){
+				numToHex(digit/10000000,HexAddress[7]);
+				digit=digit%10000000;
+			}
+			else if(digit>=1000000){
+				numToHex(digit/1000000,HexAddress[6]);
+				digit=digit%1000000;
+			}
+			else if(digit>=100000){
+				numToHex(digit/100000,HexAddress[5]);
+				digit=digit%100000;
+			}
+			else if(digit>=10000){
+				numToHex(digit/10000,HexAddress[4]);
+				digit=digit%10000;
+			}
+			else if(digit>=1000){
+				numToHex(digit/1000,HexAddress[3]);
+				digit=digit%1000;
+			}
+			else if(digit>=100){
+				numToHex(digit/100,HexAddress[2]);
+				digit=digit%100;
+			}
+			else if(digit>=10){
+				numToHex(digit/10,HexAddress[1]);
+				digit=digit%10;
+			}
+			else if(digit>=1){
+				numToHex(digit/1,HexAddress[0]);
+				digit=digit%1;
+			}
+	}
 
 }
 
@@ -184,7 +226,7 @@ void LidarReadTest(){
 	printf("\n");
 }
 
-int LidarReadDistanceL(){
+int LidarReadDistanceL(){ // returns distance lower byte
 	int LdrData = 0; //Value being read
 
 	//Hold until data = 89. [A9 A9]base16 is start of new data set
@@ -198,7 +240,7 @@ int LidarReadDistanceL(){
 	return LdrData;
 }
 
-int LidarReadDistanceH(){
+int LidarReadDistanceH(){ // returns distance upper byte
 	int LdrData = 0; //Value being read
 
 	//Hold until data = 89. [A9 A9]base16 is start of new data set
@@ -212,6 +254,25 @@ int LidarReadDistanceH(){
 	LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
 	return LdrData;
 }
+
+int LidarReadDistance(){ // returns both lower and upper byte distance as one value (2 bytes)
+	int LdrDataL = 0; //Lower byte of distance
+	int LdrDataH = 0; //Higher byte of distance
+
+	//Hold until data = 89. [A9 A9]base16 is start of new data set
+	while(LdrDataL!=89){
+		LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	}
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	LdrDataH = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	LdrDataH = LdrDataH * 256; //Shifts it a byte to the left
+	return LdrDataL + LdrDataH; // return the lower and upper bytes as one value
+}
+
 void key0_ISR(){
 	printf("key0\n");
 	moveForward();
@@ -283,19 +344,22 @@ int main()
 	pio_init(); //set up key interrupts
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 8); //Stop value high
 	IOWR_ALTERA_AVALON_TIMER_STATUS(0x1800, 2);  //Clear the TO bit
-	//IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0xF080);	//timer value Lower bit set 250ms
-	//IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x02FA);	//timer value Higher bit set
 	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower bit set 250ms
 	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher bit set
+
 	int lowerDst;
-	int upperDst;
+	int sw;
 	while(1){
-		lowerDst = LidarReadDistanceL();
-		upperDst = LidarReadDistanceH();
-		printf("%x ",lowerDst);
-		printf("%x\n",upperDst);
-		Delay1s();
-		Delay1s();
+		sw = IORD_ALTERA_AVALON_PIO_DATA(SWITCHES_BASE); //switch0 is the start switch for the car
+		if(sw == 1){
+			clearHex();
+			lowerDst = LidarReadDistance();
+			intToHexMultiNumber(lowerDst);
+			printf("%d ",lowerDst);
+			Delay1s();
+			Delay1s();
+
+		}
 	}
 
 	printf("done");
