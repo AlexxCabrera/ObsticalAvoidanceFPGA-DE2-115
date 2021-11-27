@@ -347,18 +347,17 @@ int main()
 	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower bit set 250ms
 	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher bit set
 
-	int lowerDst;
-	int sw;
+	int Dst; // distance value from lidar
+	int sw; // switches value
 	while(1){
 		sw = IORD_ALTERA_AVALON_PIO_DATA(SWITCHES_BASE); //switch0 is the start switch for the car
 		if(sw == 1){
-			clearHex();
-			lowerDst = LidarReadDistance();
-			intToHexMultiNumber(lowerDst);
-			printf("%d ",lowerDst);
-			Delay1s();
-			Delay1s();
-
+			clearHex(); // clears hex so no old value overstays their welcome
+			Dst = LidarReadDistance();  //Grab 2 bytes from lidar
+			intToHexMultiNumber(Dst); // display Lidars data on HEX
+			printf("%d ",Dst); //testing purposes
+			Delay1s(); //delay 1s
+			Delay1s(); //delay 1s 
 		}
 	}
 
