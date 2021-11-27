@@ -193,18 +193,6 @@ void moveTurnLeft(){
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
 }
 
-void getDistance(){
-	int LdrData = 0;
-	int temp = 0;
-	while(1){
-		LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
-		printf("LdrData = %x\n",LdrData);
-		while(LdrData == temp){
-			temp = IORD_ALTERA_AVALON_PIO_DATA(0x820);
-		}
-	}
-}
-
 void LidarReadTest(){
 	int LdrData = 0; //Value being read
 	int temp = 0;    //Value used to compare against read value
