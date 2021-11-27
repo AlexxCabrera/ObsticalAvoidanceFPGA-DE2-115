@@ -12,8 +12,8 @@ alt_up_sd_card_dev *device_reference = NULL;//SDCARD Pointer
 void delay(){ // delays for relative to the value of "speed"
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 8); //Stop value high
 	IOWR_ALTERA_AVALON_TIMER_STATUS(0x1800, 2);  //Clear the TO bit
-	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower bit set 250ms
-	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher bit set
+	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower set 250ms
+	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher set
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 4); //Start value high
 
 	int timeOut = IORD_ALTERA_AVALON_TIMER_STATUS(0x1800) & 0x1;
@@ -25,8 +25,8 @@ void delay(){ // delays for relative to the value of "speed"
 void Delay1s(){ // delays for relative to the value of "speed"
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 8); //Stop value high
 	IOWR_ALTERA_AVALON_TIMER_STATUS(0x1800, 2);  //Clear the TO bit
-	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0xF080);	//timer value Lower bit set 1s
-	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x02FA);	//timer value Higher bit set
+	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0xF080);	//timer value Lower set 1s
+	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x02FA);	//timer value Higher set
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 4); //Start value high
 
 	int timeOut = IORD_ALTERA_AVALON_TIMER_STATUS(0x1800) & 0x1;
@@ -48,7 +48,7 @@ void clear_LEDr_LEDg_Hex(){ //Resets the components
 	int HexAdress[8] = {0x18d0,0x18c0,0x18b0,0x18a0,0x1890,0x1880,0x1870,0x1860}; //Hex Addresses
 
 	for(int i = 0; i<8; i++){
-		IOWR_ALTERA_AVALON_PIO_DATA(HexAdress[i],127); //Clears all HEX displays except 0 and 1
+		IOWR_ALTERA_AVALON_PIO_DATA(HexAdress[i],127); //Clears all HEX displays
 	}
 
 	IOWR_ALTERA_AVALON_PIO_DATA(0x18e0, 0);	//clear the LEDred
@@ -120,7 +120,11 @@ void numToHex(int digit,int address){ //Stores digit parameter into the HEX0 dis
 void intToHexMultiNumber(int digit){
 
 	int HexAddress[8] = {0x18d0,0x18c0,0x18b0,0x18a0,0x1890,0x1880,0x1870,0x1860};
-	int j = 7;
+	int check = 127;
+
+	for(int i = 0; i<4; i++){
+		IOWR_ALTERA_AVALON_PIO_DATA(HexAddress[i],64); //set first 4 displays to 0
+	}
 
 	for(int i=0; i<8; i++){
 		if(digit>=10000000){
@@ -153,7 +157,6 @@ void intToHexMultiNumber(int digit){
 			}
 			else if(digit>=1){
 				numToHex(digit/1,HexAddress[0]);
-				digit=digit%1;
 			}
 	}
 
@@ -243,6 +246,7 @@ int LidarReadDistanceH(){ // returns distance upper byte
 	return LdrData;
 }
 
+//data valid up to roughly 655.35 meters
 int LidarReadDistance(){ // returns both lower and upper byte distance as one value (2 bytes)
 	int LdrDataL = 0; //Lower byte of distance
 	int LdrDataH = 0; //Higher byte of distance
@@ -264,7 +268,6 @@ int LidarReadDistance(){ // returns both lower and upper byte distance as one va
 void key0_ISR(){
 	printf("key0\n");
 	moveForward();
-	//LidarRead();
 }
 
 void key1_ISR(){
@@ -332,20 +335,19 @@ int main()
 	pio_init(); //set up key interrupts
 	IOWR_ALTERA_AVALON_TIMER_CONTROL(0x1800, 8); //Stop value high
 	IOWR_ALTERA_AVALON_TIMER_STATUS(0x1800, 2);  //Clear the TO bit
-	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower bit set 250ms
-	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher bit set
+	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower set 250ms
+	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher set
 
 	int Dst; // distance value from lidar
 	int sw; // switches value
 	while(1){
 		sw = IORD_ALTERA_AVALON_PIO_DATA(SWITCHES_BASE); //switch0 is the start switch for the car
 		if(sw == 1){
-			clearHex(); // clears hex so no old value overstays their welcome
 			Dst = LidarReadDistance();  //Grab 2 bytes from lidar
 			intToHexMultiNumber(Dst); // display Lidars data on HEX
-			printf("%d ",Dst); //testing purposes
+			printf("%d\n",Dst); //testing purposes
 			Delay1s(); //delay 1s
-			Delay1s(); //delay 1s 
+			Delay1s(); //delay 1s
 		}
 	}
 
