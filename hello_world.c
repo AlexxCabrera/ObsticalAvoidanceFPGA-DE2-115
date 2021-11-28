@@ -236,31 +236,52 @@ int LidarReadDistanceH(){ // returns distance upper byte
 
 	//Hold until data = 89. [A9 A9]base16 is start of new data set
 	while(LdrData!=89){
-		LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+		LdrData = IORD_ALTERA_AVALON_PIO_DATA(UART_0_BASE);
 	}
 	delay(); //0x0D90 delays for 8bits (a byte) of data
 	delay(); //0x0D90 delays for 8bits (a byte) of data
 	delay(); //0x0D90 delays for 8bits (a byte) of data
 	delay(); //0x0D90 delays for 8bits (a byte) of data
-	LdrData = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	LdrData = IORD_ALTERA_AVALON_PIO_DATA(UART_0_BASE);
 	return LdrData;
 }
 
 //data valid up to roughly 655.35 meters
+//Front Sensor
 int LidarReadDistance(){ // returns both lower and upper byte distance as one value (2 bytes)
 	int LdrDataL = 0; //Lower byte of distance
 	int LdrDataH = 0; //Higher byte of distance
 
 	//Hold until data = 89. [A9 A9]base16 is start of new data set
 	while(LdrDataL!=89){
-		LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+		LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(UART_0_BASE);
 	}
 	delay(); //0x0D90 delays for 8bits (a byte) of data
 	delay(); //0x0D90 delays for 8bits (a byte) of data
 	delay(); //0x0D90 delays for 8bits (a byte) of data
-	LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(UART_0_BASE);
 	delay(); //0x0D90 delays for 8bits (a byte) of data
-	LdrDataH = IORD_ALTERA_AVALON_PIO_DATA(0x820);
+	LdrDataH = IORD_ALTERA_AVALON_PIO_DATA(UART_0_BASE);
+	LdrDataH = LdrDataH * 256; //Shifts it a byte to the left
+	return LdrDataL + LdrDataH; // return the lower and upper bytes as one value
+}
+
+//data valid up to roughly 655.35 meters
+//Back Sensor
+int LidarReadDistance2(){ // returns both lower and upper byte distance as one value (2 bytes)
+	int LdrDataL = 0; //Lower byte of distance
+	int LdrDataH = 0; //Higher byte of distance
+
+	//Hold until data = 89. [A9 A9]base16 is start of new data set
+	while(LdrDataL!=89){
+		LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(UART_1_BASE);
+	}
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	LdrDataL = IORD_ALTERA_AVALON_PIO_DATA(UART_1_BASE);
+	delay(); //0x0D90 delays for 8bits (a byte) of data
+	LdrDataH = IORD_ALTERA_AVALON_PIO_DATA(UART_1_BASE);
 	LdrDataH = LdrDataH * 256; //Shifts it a byte to the left
 	return LdrDataL + LdrDataH; // return the lower and upper bytes as one value
 }
@@ -338,14 +359,17 @@ int main()
 	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower set 250ms
 	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher set
 
-	int Dst; // distance value from lidar
+	int DstFront; // distance value from lidar
+	int DstBack; // distance value from lidar
 	int sw; // switches value
 	while(1){
 		sw = IORD_ALTERA_AVALON_PIO_DATA(SWITCHES_BASE); //switch0 is the start switch for the car
 		if(sw == 1){
-			Dst = LidarReadDistance();  //Grab 2 bytes from lidar
-			intToHexMultiNumber(Dst); // display Lidars data on HEX
-			printf("%d\n",Dst); //testing purposes
+			DstFront = LidarReadDistance();  //Grab 2 bytes from lidar
+			intToHexMultiNumber(DstFront); // display Lidars data on HEX
+
+			DstBack = LidarReadDistance2();  //Grab 2 bytes from lidar
+			printf("%d %d\n",DstFront,DstBack); //testing purposes
 			Delay1s(); //delay 1s
 			Delay1s(); //delay 1s
 		}
