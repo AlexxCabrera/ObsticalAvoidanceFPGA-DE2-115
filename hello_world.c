@@ -120,10 +120,14 @@ void numToHex(int digit,int address){ //Stores digit parameter into the HEX0 dis
 void intToHexMultiNumber(int digit){
 
 	int HexAddress[8] = {0x18d0,0x18c0,0x18b0,0x18a0,0x1890,0x1880,0x1870,0x1860};
-	int check = 127;
 
-	for(int i = 0; i<4; i++){
-		IOWR_ALTERA_AVALON_PIO_DATA(HexAddress[i],64); //set first 4 displays to 0
+	for(int i = 0; i<8; i++){
+		if(i<4){
+			IOWR_ALTERA_AVALON_PIO_DATA(HexAddress[i],64); //set hex 3-0 displays to 0
+		}
+		else{
+			IOWR_ALTERA_AVALON_PIO_DATA(HexAddress[i],127); //hex 7-4 displays off
+		}
 	}
 
 	for(int i=0; i<8; i++){
@@ -167,33 +171,38 @@ int wheels;
 void moveForward(){
 	wheels = 1+2+32+64;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
+	/*Delay1s();
 	Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
+	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
 }
 
 void moveBack(){
 	wheels = 4+8+16+128;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
+	/*Delay1s();
 	Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
+	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
 }
 
 void moveTurnRight(){
 	wheels = 2+64+8+16;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
+	/*Delay1s();
 	Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
+	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
 }
 
 void moveTurnLeft(){
 	wheels = 4+128+1+32;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
+	/*Delay1s();
 	Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);
+	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
+}
+
+void stopCar(){
+	wheels = 0;
+	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
 }
 
 void LidarReadTest(){
@@ -348,6 +357,41 @@ static void pio_init () /* Initialize the button_pio. */
 	alt_irq_register( KEY_0_IRQ, edge_capture_ptr, handle_key_interrupts);
 }
 
+void carMovement(){
+
+	int distanceFront;
+
+	distanceFront = LidarReadDistance();
+
+	if(distanceFront > 43 ){ // move forward if there is more than 43 cm in front of car
+		moveForward();
+		printf("Moving Forward...\n");
+	}
+	else if(distanceFront < 26){ // back up if too close to wall
+		moveBack();
+		printf("Moving Backwards...\n");
+		while(distanceFront < 35){ // stop backing up when 35 cm away from wall
+			distanceFront = LidarReadDistance();
+			Delay1s();
+		}
+		//stopCar();
+		//delay();
+	}
+	else{ //when less than 39cm stop car and turn
+		//stopCar();
+		//printf("Stopping Car...");
+		distanceFront = LidarReadDistance();
+		Delay1s();
+		moveTurnLeft();
+		printf("Turning Left...\n");
+		/*if(distanceFront >39){
+			stopCar();
+			moveForward();
+			return;
+		}*/
+	}
+}
+
 int main()
 {
 	printf("Program Started\n");
@@ -368,10 +412,14 @@ int main()
 			DstFront = LidarReadDistance();  //Grab 2 bytes from lidar
 			intToHexMultiNumber(DstFront); // display Lidars data on HEX
 
-			DstBack = LidarReadDistance2();  //Grab 2 bytes from lidar
-			printf("%d %d\n",DstFront,DstBack); //testing purposes
-			Delay1s(); //delay 1s
-			Delay1s(); //delay 1s
+			//DstBack = LidarReadDistance2();  //Grab 2 bytes from lidar
+			//printf("%d %d\n",DstFront,DstBack); //testing purposes
+
+			Delay1s();
+			carMovement();
+
+		}else{
+			stopCar();
 		}
 	}
 
