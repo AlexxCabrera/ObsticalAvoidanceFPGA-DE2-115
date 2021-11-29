@@ -360,35 +360,38 @@ static void pio_init () /* Initialize the button_pio. */
 void carMovement(){
 
 	int distanceFront;
+	int IR;
 
 	distanceFront = LidarReadDistance();
 
-	if(distanceFront > 43 ){ // move forward if there is more than 43 cm in front of car
+	if(distanceFront > 40 ){ // move forward if there is more than 40 cm in front of car
 		moveForward();
 		printf("Moving Forward...\n");
 	}
-	else if(distanceFront < 26){ // back up if too close to wall
+	else if(distanceFront < 20){ // back up if too close to wall
 		moveBack();
 		printf("Moving Backwards...\n");
 		while(distanceFront < 35){ // stop backing up when 35 cm away from wall
 			distanceFront = LidarReadDistance();
 			Delay1s();
 		}
-		//stopCar();
-		//delay();
 	}
-	else{ //when less than 39cm stop car and turn
-		//stopCar();
-		//printf("Stopping Car...");
-		distanceFront = LidarReadDistance();
-		Delay1s();
-		moveTurnLeft();
-		printf("Turning Left...\n");
-		/*if(distanceFront >39){
-			stopCar();
-			moveForward();
-			return;
-		}*/
+	else{
+		IR = IORD_ALTERA_AVALON_PIO_DATA(PIO_0_BASE); //used to check left and right
+		if(IR == 3){
+			moveTurnLeft();
+			printf("Turning Left...\n");
+		}
+		else if(IR == 2){
+			moveTurnLeft();
+			printf("Turning Left...\n");
+		}
+		else if(IR == 1){
+			moveTurnRight();
+			printf("Turning Right...\n");
+		}else{
+			printf("IR SENSOR ERROR...\n");
+		}
 	}
 }
 
@@ -406,14 +409,13 @@ int main()
 	int DstFront; // distance value from lidar
 	int DstBack; // distance value from lidar
 	int sw; // switches value
+	int IR; //IR readings
 	while(1){
 		sw = IORD_ALTERA_AVALON_PIO_DATA(SWITCHES_BASE); //switch0 is the start switch for the car
+
 		if(sw == 1){
 			DstFront = LidarReadDistance();  //Grab 2 bytes from lidar
 			intToHexMultiNumber(DstFront); // display Lidars data on HEX
-
-			//DstBack = LidarReadDistance2();  //Grab 2 bytes from lidar
-			//printf("%d %d\n",DstFront,DstBack); //testing purposes
 
 			Delay1s();
 			carMovement();
