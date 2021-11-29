@@ -389,6 +389,10 @@ void carMovement(){
 		else if(IR == 1){
 			moveTurnRight();
 			printf("Turning Right...\n");
+		}else if(IR == 0){
+			stopCar();
+			Delay1s();
+			moveBack();
 		}else{
 			printf("IR SENSOR ERROR...\n");
 		}
