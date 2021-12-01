@@ -4,6 +4,7 @@
 #include "altera_avalon_timer_regs.h"
 #include "sys/alt_irq.h"
 #include <altera_up_sd_card_avalon_interface.h>
+#include "altera_up_avalon_character_lcd.h"
 
 volatile int edge_capture;
 
@@ -166,43 +167,82 @@ void intToHexMultiNumber(int digit){
 
 }
 
+void LCDSetup(){
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	alt_up_character_lcd_init(lcd);
+}
+
+void LCDReset(alt_up_character_lcd_dev *lcd){
+	alt_up_character_lcd_init(lcd);
+}
+
+void LCDLeft(alt_up_character_lcd_dev *lcd){
+		LCDReset(lcd);
+		alt_up_character_lcd_write(lcd, "Turning Left" , 12);
+}
+void LCDRight(alt_up_character_lcd_dev *lcd){
+		LCDReset(lcd);
+		alt_up_character_lcd_write(lcd, "Turning Right" , 13);
+}
+void LCDObstacle(alt_up_character_lcd_dev *lcd){
+	alt_up_character_lcd_set_cursor_pos(lcd, 0, 1);
+	alt_up_character_lcd_write(lcd, "Obstacle Ahead!" , 15);
+}
+void LCDForward(alt_up_character_lcd_dev *lcd){
+	LCDReset(lcd);
+	alt_up_character_lcd_write(lcd, "Moving Forward" , 14);
+}
+void LCDBackward(alt_up_character_lcd_dev *lcd){
+	LCDReset(lcd);
+	alt_up_character_lcd_write(lcd, "Moving Backwards" , 16);
+}
+
 int wheels;
 
 void moveForward(){
 	wheels = 1+2+32+64;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	/*Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
+
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	LCDForward(lcd);
 }
 
 void moveBack(){
 	wheels = 4+8+16+128;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	/*Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
+
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	LCDBackward(lcd);
 }
 
 void moveTurnRight(){
 	wheels = 2+64+8+16;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	/*Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
+
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	LCDRight(lcd);
 }
 
 void moveTurnLeft(){
 	wheels = 4+128+1+32;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
-	/*Delay1s();
-	Delay1s();
-	IOWR_ALTERA_AVALON_PIO_DATA(0x810,0);*/
+
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	LCDLeft(lcd);
 }
 
 void stopCar(){
 	wheels = 0;
 	IOWR_ALTERA_AVALON_PIO_DATA(0x810,wheels);
+
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	LCDReset(lcd);
 }
 
 void LidarReadTest(){
@@ -410,10 +450,14 @@ int main()
 	IOWR_ALTERA_AVALON_TIMER_PERIODL(0x1800, 0x0D90);	//timer value Lower set 250ms
 	IOWR_ALTERA_AVALON_TIMER_PERIODH(0x1800, 0x0000);	//timer value Higher set
 
+	alt_up_character_lcd_dev * lcd;
+	lcd = alt_up_character_lcd_open_dev("/dev/character_lcd_0");
+	alt_up_character_lcd_init(lcd);
+
 	int DstFront; // distance value from lidar
-	int DstBack; // distance value from lidar
+	//int DstBack; // distance value from lidar
 	int sw; // switches value
-	int IR; //IR readings
+	//int IR; //IR readings
 	while(1){
 		sw = IORD_ALTERA_AVALON_PIO_DATA(SWITCHES_BASE); //switch0 is the start switch for the car
 
